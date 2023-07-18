@@ -1,4 +1,3 @@
-import typer
 from utils import detect_language, build_directory_structure
 import os
 import time as time
@@ -45,7 +44,9 @@ def main(
         guidelines: str = typer.Option("", help="Stylistic or small functional guidelines that you'd like to be followed during the migration. For instance, \"Use tabs, not spaces\"."),
         step: str = typer.Option("all", help="Step to run. Options are 'setup', 'migrate', 'test', 'all'.")
     ):
-
+    """
+    Main function that handles the migration process given the parameters.
+    """
     ai = AI(
         model=model,
         temperature=temperature,
@@ -79,18 +80,24 @@ def main(
     time.sleep(0.3)
     typer.echo(typer.style("Source directory structure: \n\n" + source_directory_structure, fg=typer.colors.BLUE))
 
-
     ''' 1. Setup '''
     if step in ['setup', 'all']:
-
+        """
+        Step 1: Setup
+        """
         # Set up environment (Docker)
         create_environment(globals)
 
     ''' 2. Migration '''
     if step in ['migrate', 'all']:
+        """
+        Step 2: Migration
+        """
         target_deps_per_file = defaultdict(list) 
         def migrate(sourcefile, globals, parent_file=None):
-            # recursively work through each of the files in the source directory, starting with the entrypoint.
+            """
+            Recursively migrates the source file and its dependencies to the target language.
+            """
             internal_deps_list, external_deps_list = get_dependencies(sourcefile=sourcefile,globals=globals)
             for dependency in internal_deps_list:
                 migrate(dependency, globals, parent_file=sourcefile)
@@ -102,6 +109,9 @@ def main(
 
     ''' 3. Testing '''
     if step in ['test', 'all']:
+        """
+        Step 3: Testing
+        """
         while True:
             result = run_dockerfile(globals)
             if result=="success": break
@@ -120,7 +130,7 @@ def main(
                 debug_error(result,globals.testfiles,globals)
                 run_dockerfile(globals)
                 time.sleep(1) # wait for docker to spin up
-    
+
     typer.echo(typer.style("All tests complete. Ready to rumble. 💪", fg=typer.colors.GREEN))
 
 if __name__ == "__main__":
