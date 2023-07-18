@@ -7,10 +7,19 @@ Classes:
 
 Functions:
     hello_world() -> str
+        Returns a simple "Hello World!" message.
+
     get_grocery_items() -> Union[list[dict], Tuple[str, int]]
+        Fetches all the grocery items from the database.
+
     add_grocery_item() -> Union[str, int]
+        Adds a new grocery item to the database.
+
     delete_grocery_item(item_id: int) -> Union[str, int]
+        Deletes a grocery item from the database.
+
     hash_password(password: str) -> Union[str, int]
+        Hashes the provided password using bcrypt.
 
 Exceptions:
     None
@@ -111,3 +120,4 @@ def hash_password(password):
 
 if __name__ == '__main__':
     app.run(debug=True)
+"""
