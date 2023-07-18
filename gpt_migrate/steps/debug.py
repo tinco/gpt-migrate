@@ -4,46 +4,64 @@ import os
 import typer
 import subprocess
     
-def debug_error(error_message,relevant_files,globals):
+def debug_error(error_message, relevant_files, globals):
+    """
+    Debugs an error by performing various actions based on user prompts.
+
+    Args:
+        error_message (str): The error message to be debugged.
+        relevant_files (str): The relevant files associated with the error.
+        globals (object): The global variables.
+
+    Returns:
+        None
+    """
 
     identify_action_template = prompt_constructor(HIERARCHY, GUIDELINES, IDENTIFY_ACTION)
 
-    prompt = identify_action_template.format(error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
-                                                target_directory_structure=build_directory_structure(globals.targetdir))
+    prompt = identify_action_template.format(
+        error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
+        target_directory_structure=build_directory_structure(globals.targetdir))
     
     actions = llm_run(prompt,
-                        waiting_message=f"Planning actions for debugging...",
-                        success_message="",
-                        globals=globals)
+                      waiting_message=f"Planning actions for debugging...",
+                      success_message="",
+                      globals=globals)
     
     action_list = actions.split(',')
     
     if "MOVE_FILES" in action_list:
-
         if not os.path.exists(os.path.join(globals.targetdir, 'gpt_migrate')):
             os.makedirs(os.path.join(globals.targetdir, 'gpt_migrate')) 
 
         move_files_template = prompt_constructor(HIERARCHY, GUIDELINES, WRITE_CODE, MOVE_FILES, SINGLEFILE)
 
-        prompt = move_files_template.format(error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
-                                              target_directory_structure=build_directory_structure(globals.targetdir),
-                                              current_full_path=globals.targetdir,
-                                              operating_system=globals.operating_system,
-                                              guidelines=globals.guidelines)
+        prompt = move_files_template.format(
+            error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
+            target_directory_structure=build_directory_structure(globals.targetdir),
+            current_full_path=globals.targetdir,
+            operating_system=globals.operating_system,
+            guidelines=globals.guidelines)
         
-        file_name, language, shell_script_content = llm_write_file(prompt,
-                                                            target_path="gpt_migrate/debug.sh",
-                                                            waiting_message=f"Writing shell script...",
-                                                            success_message="Wrote debug.sh based on error message.",
-                                                            globals=globals)
+        file_name, language, shell_script_content = llm_write_file(
+            prompt,
+            target_path="gpt_migrate/debug.sh",
+            waiting_message=f"Writing shell script...",
+            success_message="Wrote debug.sh based on error message.",
+            globals=globals)
         
         # execute shell script from file_content using subprocess. Check with user using shell commands before executing.
         if typer.confirm("GPT-Migrate wants to run this shell script to debug your application, which is also stored in gpt_migrate/debug.sh: \n\n"+shell_script_content+"\n\nWould you like to run it?"):
             try:
-                result = subprocess.run(["bash", "gpt_migrate/debug.sh"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True, text=True)
+                result = subprocess.run(
+                    ["bash", "gpt_migrate/debug.sh"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    check=True,
+                    text=True)
                 print(result.stdout)
             except subprocess.CalledProcessError as e:
-                print("ERROR: ",e.output)
+                print("ERROR: ", e.output)
                 error_message = e.output
                 error_text = typer.style("Something isn't right with your shell script. Please ensure it is valid and try again.", fg=typer.colors.RED)
                 typer.echo(error_text)
@@ -63,16 +81,23 @@ def debug_error(error_message,relevant_files,globals):
 
         identify_file_template = prompt_constructor(HIERARCHY, GUIDELINES, IDENTIFY_FILE, FILENAMES)
 
-        docker_logs = subprocess.run(["docker", "logs", "gpt-migrate"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True, text=True).stdout
+        docker_logs = subprocess.run(
+            ["docker", "logs", "gpt-migrate"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=True,
+            text=True).stdout
 
-        prompt = identify_file_template.format(error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
-                                                target_directory_structure=build_directory_structure(globals.targetdir),
-                                                docker_logs=docker_logs[-min(MAX_DOCKER_LOG_CHARACTERS, len(docker_logs)):]),
+        prompt = identify_file_template.format(
+            error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
+            target_directory_structure=build_directory_structure(globals.targetdir),
+            docker_logs=docker_logs[-min(MAX_DOCKER_LOG_CHARACTERS, len(docker_logs)):])
 
-        file_names = llm_run(prompt,
-                                waiting_message=f"Identifying files to debug...",
-                                success_message="",
-                                globals=globals)
+        file_names = llm_run(
+            prompt,
+            waiting_message=f"Identifying files to debug...",
+            success_message="",
+            globals=globals)
         
         file_name_list = file_names.split(',')
         for file_name in file_name_list:
@@ -86,45 +111,63 @@ def debug_error(error_message,relevant_files,globals):
         
             debug_file_template = prompt_constructor(HIERARCHY, GUIDELINES, WRITE_CODE, DEBUG_FILE, SINGLEFILE)
             
-            prompt = debug_file_template.format(error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
-                                                file_name=file_name,
-                                                old_file_content=old_file_content,
-                                                targetlang=globals.targetlang,
-                                                sourcelang=globals.sourcelang,
-                                                docker_logs=docker_logs[-min(MAX_DOCKER_LOG_CHARACTERS, len(docker_logs)):],
-                                                relevant_files=relevant_files,
-                                                guidelines=globals.guidelines),
-
-            _, language, file_content = llm_write_file(prompt,
-                                                        target_path=file_name,
-                                                        waiting_message=f"Debugging {file_name}...",
-                                                        success_message=f"Re-wrote {file_name} based on error message.",
-                                                        globals=globals)
+            prompt = debug_file_template.format(
+                error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
+                file_name=file_name,
+                old_file_content=old_file_content,
+                targetlang=globals.targetlang,
+                sourcelang=globals.sourcelang,
+                docker_logs=docker_logs[-min(MAX_DOCKER_LOG_CHARACTERS, len(docker_logs)):],
+                relevant_files=relevant_files,
+                guidelines=globals.guidelines)
+            
+            _, language, file_content = llm_write_file(
+                prompt,
+                target_path=file_name,
+                waiting_message=f"Debugging {file_name}...",
+                success_message=f"Re-wrote {file_name} based on error message.",
+                globals=globals)
         
             new_file_content = ""
             with open(os.path.join(globals.targetdir, file_name), 'r') as file:
                 new_file_content = file.read()
             
-            if new_file_content==old_file_content:
-                require_human_intervention(error_message,construct_relevant_files([(file_name, new_file_content)]),globals)
+            if new_file_content == old_file_content:
+                require_human_intervention(
+                    error_message,
+                    construct_relevant_files([(file_name, new_file_content)]),
+                    globals)
 
     if "CREATE_FILE" in action_list:
 
         create_file_template = prompt_constructor(HIERARCHY, GUIDELINES, WRITE_CODE, CREATE_FILE, SINGLEFILE)
 
-        prompt = create_file_template.format(error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
-                                                target_directory_structure=build_directory_structure(globals.targetdir),
-                                                guidelines=globals.guidelines)
+        prompt = create_file_template.format(
+            error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
+            target_directory_structure=build_directory_structure(globals.targetdir),
+            guidelines=globals.guidelines)
 
-        new_file_name, language, file_content = llm_write_file(prompt,
-                                                                waiting_message=f"Creating a new file...",
-                                                                success_message="",
-                                                                globals=globals)
+        new_file_name, language, file_content = llm_write_file(
+            prompt,
+            waiting_message=f"Creating a new file...",
+            success_message="",
+            globals=globals)
         
         success_text = typer.style(f"Created new file {new_file_name}.", fg=typer.colors.GREEN)
         typer.echo(success_text)
 
-def debug_testfile(error_message,testfile,globals):
+def debug_testfile(error_message, testfile, globals):
+    """
+    Debugs an error in a test file by performing necessary actions based on user prompts.
+
+    Args:
+        error_message (str): The error message to be debugged.
+        testfile (str): The name of the test file.
+        globals (object): The global variables.
+
+    Returns:
+        None
+    """
 
     source_file_content = ""
     with open(os.path.join(globals.sourcedir, testfile), 'r') as file:
@@ -142,37 +185,55 @@ def debug_testfile(error_message,testfile,globals):
 
     debug_file_template = prompt_constructor(HIERARCHY, GUIDELINES, WRITE_CODE, DEBUG_TESTFILE, SINGLEFILE)
     
-    prompt = debug_file_template.format(error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
-                                        file_name=file_name,
-                                        old_file_content=old_file_content,
-                                        relevant_files=relevant_files,
-                                        guidelines=globals.guidelines),
-
-    _, language, file_content = llm_write_file(prompt,
-                                                target_path=file_name,
-                                                waiting_message=f"Debugging {file_name}...",
-                                                success_message=f"Re-wrote {file_name} based on error message.",
-                                                globals=globals)
+    prompt = debug_file_template.format(
+        error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
+        file_name=file_name,
+        old_file_content=old_file_content,
+        relevant_files=relevant_files,
+        guidelines=globals.guidelines)
+    
+    _, language, file_content = llm_write_file(
+        prompt,
+        target_path=file_name,
+        waiting_message=f"Debugging {file_name}...",
+        success_message=f"Re-wrote {file_name} based on error message.",
+        globals=globals)
 
     with open(os.path.join(globals.targetdir, file_name), 'r') as file:
         new_file_content = file.read()
     
-    if new_file_content==old_file_content:
-        require_human_intervention(error_message,construct_relevant_files([(file_name, new_file_content)]),globals)
+    if new_file_content == old_file_content:
+        require_human_intervention(
+            error_message,
+            construct_relevant_files([(file_name, new_file_content)]),
+            globals)
     
-def require_human_intervention(error_message,relevant_files,globals):
+def require_human_intervention(error_message, relevant_files, globals):
+    """
+    Requires human intervention to resolve an error by providing instructions.
+
+    Args:
+        error_message (str): The error message to be resolved.
+        relevant_files (str): The relevant files associated with the error.
+        globals (object): The global variables.
+
+    Returns:
+        None
+    """
 
     human_intervention_template = prompt_constructor(HIERARCHY, GUIDELINES, WRITE_CODE, HUMAN_INTERVENTION, SINGLEFILE)
     
-    prompt = human_intervention_template.format(error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
-                                                relevant_files=relevant_files,
-                                                target_directory_structure=build_directory_structure(globals.targetdir),
-                                                guidelines=globals.guidelines)
+    prompt = human_intervention_template.format(
+        error_message=error_message[-min(MAX_ERROR_MESSAGE_CHARACTERS, len(error_message)):],
+        relevant_files=relevant_files,
+        target_directory_structure=build_directory_structure(globals.targetdir),
+        guidelines=globals.guidelines)
     
-    instructions = llm_run(prompt,
-                            waiting_message=f"Writing instructions for how to proceed...",
-                            success_message="",
-                            globals=globals)
+    instructions = llm_run(
+        prompt,
+        waiting_message=f"Writing instructions for how to proceed...",
+        success_message="",
+        globals=globals)
     
     typer.echo(typer.style(f"GPT-Migrate is having some trouble debugging your app and requires human intervention. Below are instructions for how to fix your application.", fg=typer.colors.BLUE))
     print(instructions)
