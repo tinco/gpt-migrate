@@ -8,6 +8,15 @@ from yaspin import yaspin
 from steps.debug import require_human_intervention
 
 def run_dockerfile(globals):
+    """
+    Run the Docker container for the gpt-migrate project.
+
+    Args:
+        globals (object): The global configuration object.
+
+    Returns:
+        str: The status of the Docker container.
+    """
     try:
         with yaspin(text="Spinning up Docker container...", spinner="dots") as spinner:
             result = subprocess.run(["docker", "build", "-t", "gpt-migrate", globals.targetdir], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True, text=True)
@@ -34,7 +43,16 @@ def run_dockerfile(globals):
             raise typer.Exit()
         
 def create_tests(testfile,globals):
+    """
+    Create tests for the specified file.
 
+    Args:
+        testfile (str): The name of the test file.
+        globals (object): The global configuration object.
+
+    Returns:
+        str: The name of the created tests file.
+    """
     # Makedir gpt_migrate in targetdir if it doesn't exist
     if not os.path.exists(os.path.join(globals.targetdir, 'gpt_migrate')):
         os.makedirs(os.path.join(globals.targetdir, 'gpt_migrate'))
@@ -57,6 +75,16 @@ def create_tests(testfile,globals):
     return f"{testfile}.tests.py"
 
 def validate_tests(testfile,globals):
+    """
+    Validate the tests for the specified file.
+
+    Args:
+        testfile (str): The name of the test file.
+        globals (object): The global configuration object.
+
+    Returns:
+        str: The status of the validation process.
+    """
     try:
         with yaspin(text="Validating tests...", spinner="dots") as spinner:
             # find all instances of globals.targetport in the testfile and replace with the port number globals.sourceport
@@ -88,6 +116,16 @@ def validate_tests(testfile,globals):
         return f"gpt_migrate/{testfile} timed out due to an unknown error and requires debugging."
 
 def run_test(testfile,globals):
+    """
+    Run the tests for the specified file.
+
+    Args:
+        testfile (str): The name of the test file.
+        globals (object): The global configuration object.
+
+    Returns:
+        str: The status of the test execution.
+    """
     try:
         with yaspin(text="Running tests...", spinner="dots") as spinner:
             time.sleep(0.3)
@@ -116,6 +154,3 @@ def run_test(testfile,globals):
     except subprocess.TimeoutExpired as e:
         print(f"gpt_migrate/{testfile} timed out due to an unknown error and requires debugging.")
         return f"gpt_migrate/{testfile} timed out due to an unknown error and requires debugging."
-
-
-        
