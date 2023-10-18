@@ -27,7 +27,6 @@ class Globals:
         self.targetport = targetport
         self.guidelines = guidelines
         self.ai = ai
-        
 
 @app.command()
 def main(
@@ -45,6 +44,27 @@ def main(
         guidelines: str = typer.Option("", help="Stylistic or small functional guidelines that you'd like to be followed during the migration. For instance, \"Use tabs, not spaces\"."),
         step: str = typer.Option("all", help="Step to run. Options are 'setup', 'migrate', 'test', 'all'.")
     ):
+    """
+    Main function to run the migration tool.
+
+    Args:
+        model (str): Large Language Model to be used.
+        temperature (float): Temperature setting for the AI model.
+        sourcedir (str): Source directory containing the code to be migrated.
+        sourcelang (str): Source language or framework of the code to be migrated.
+        sourceentry (str): Entrypoint filename relative to the source directory.
+        targetdir (str): Directory where the migrated code will live.
+        targetlang (str): Target language or framework for migration.
+        operating_system (str): Operating system for the Dockerfile.
+        testfiles (str): Comma-separated list of files that have functions to be tested.
+        sourceport (int): (Optional) port for testing the unit tests file against the original app.
+        targetport (int): Port for testing the unit tests file against the migrated app.
+        guidelines (str): Stylistic or small functional guidelines for the migration.
+        step (str): Step to run.
+
+    Returns:
+        None
+    """
 
     ai = AI(
         model=model,
@@ -79,21 +99,45 @@ def main(
     time.sleep(0.3)
     typer.echo(typer.style("Source directory structure: \n\n" + source_directory_structure, fg=typer.colors.BLUE))
 
-
     ''' 1. Setup '''
     if step in ['setup', 'all']:
+        """
+        Step 1: Setup
 
-        # Set up environment (Docker)
+        Set up the environment for migration by creating Docker files and directories.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+
         create_environment(globals)
 
     ''' 2. Migration '''
     if step in ['migrate', 'all']:
+        """
+        Step 2: Migration
+
+        Migrate the codebase from the source language/framework to the target language/framework.
+
+        Args:
+            sourcefile (str): The file to be migrated.
+            globals (Globals): Object containing global variables and configuration.
+
+        Returns:
+            None
+        """
+
         target_deps_per_file = defaultdict(list) 
+
         def migrate(sourcefile, globals, parent_file=None):
-            # recursively work through each of the files in the source directory, starting with the entrypoint.
             internal_deps_list, external_deps_list = get_dependencies(sourcefile=sourcefile,globals=globals)
+            
             for dependency in internal_deps_list:
                 migrate(dependency, globals, parent_file=sourcefile)
+
             file_name = write_migration(sourcefile, external_deps_list, target_deps_per_file.get(sourcefile), globals)
             target_deps_per_file[parent_file].append(file_name)
 
@@ -102,21 +146,39 @@ def main(
 
     ''' 3. Testing '''
     if step in ['test', 'all']:
+        """
+        Step 3: Testing
+
+        Run tests on the migrated codebase.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+
         while True:
             result = run_dockerfile(globals)
-            if result=="success": break
+            if result=="success":
+                break
             debug_error(result,"",globals)
+
         for testfile in globals.testfiles.split(','):
             generated_testfile = create_tests(testfile,globals)
+            
             if globals.sourceport:
                 while True:
                     result = validate_tests(generated_testfile, globals)
                     time.sleep(0.3)
-                    if result=="success": break
+                    if result=="success":
+                        break
                     debug_testfile(result,testfile,globals)
+
             while True:
                 result = run_test(generated_testfile, globals)
-                if result=="success": break
+                if result=="success":
+                    break
                 debug_error(result,globals.testfiles,globals)
                 run_dockerfile(globals)
                 time.sleep(1) # wait for docker to spin up
