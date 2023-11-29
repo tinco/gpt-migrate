@@ -1,19 +1,17 @@
 import os
 
-'''
-Environment variables
-'''
+# Environment variables
+# OPENAI_API_KEY is obtained from environment variables for secure API access.
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-'''
-Global variables
-'''
+# Global variables
+# MAX_ERROR_MESSAGE_CHARACTERS sets the limit for error message verbosity.
 MAX_ERROR_MESSAGE_CHARACTERS = 5000
+# MAX_DOCKER_LOG_CHARACTERS sets the limit for docker log output.
 MAX_DOCKER_LOG_CHARACTERS = 2000
 
-'''
-Prompt directory
-'''
+# Prompt directory
+# Constants representing various directory paths used for prompts in migration process.
 HIERARCHY = "HIERARCHY"
 GUIDELINES = "p1_guidelines/guidelines"
 WRITE_CODE = "p2_actions/write_code"
@@ -37,43 +35,43 @@ MULTIFILE = "p4_output_formats/multi_file"
 SINGLEFILE = "p4_output_formats/single_file"
 FILENAMES = "p4_output_formats/filenames"
 
-'''
-Living list of types of files that should be excluded from being copied over
-'''
+# Living list of types of files that should be excluded from being copied over.
+# Items listed are various config or system files from different tech ecosystems.
 EXCLUDED_FILES = [
-    # Docker
+    # Docker-related files
     'Dockerfile',
 
-    # Python
+    # Python-specific files
     'requirements.txt', 
     '__pycache__/',
 
-    # JS
+    # JavaScript package files
     'package.json', 
     'package-lock.json', 
     'yarn.lock', 
-    'node_modules/'
+    'node_modules/',
 
-    # Rust
-    'Cargo.toml'
+    # Rust package manifest
+    'Cargo.toml',
 
     # TODO: add more
 ]
 
-'''
-Living list of file extensions that should be copied over
-'''
+# Living list of file extensions that should be copied over during migration process.
+# These represent common data and configuration files.
 INCLUDED_EXTENSIONS = (
     '.env', 
     '.txt', 
     '.json',
     '.csv',
     '.rdb',
-    '.db'
+    '.db',
 
     # TODO: add more
 )
 
+# Mapping from file extensions to programming languages.
+# This is used to identify and handle files correctly based on their language.
 EXTENSION_TO_LANGUAGE = {
     'py': 'Python',
     'js': 'JavaScript',
@@ -107,5 +105,5 @@ EXTENSION_TO_LANGUAGE = {
     'hs': 'Haskell',
     'jl': 'Julia',
     'nim': 'Nim',
-    'php': 'PHP',
+    # Duplicate 'php': 'PHP' entry removed for consistency.
 }
